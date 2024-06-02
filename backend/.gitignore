@@ -6,7 +6,15 @@ yarn-error.log
 # Python
 venv/
 __pycache__/
+env/
+*.pyc
 
 # Miscellaneous
 .DS_Store
 .env
+
+# SQLite database
+*.db
+
+# VSCode settings
+.vscode/

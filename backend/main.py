@@ -1,43 +1,93 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import subprocess
+import models
+from models import SessionLocal, engine
 
-# Create an instance of the FastAPI class
+# Create all database tables
+models.Base.metadata.create_all(bind=engine)
+
+# Initialize FastAPI app
 app = FastAPI()
 
 # Add CORS middleware to allow requests from your frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow requests from any origin
-    allow_credentials=True,  # Allow cookies to be included in cross-origin requests
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, PUT, DELETE, etc.)
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,  # Allow credentials
+    allow_methods=["*"],  # Allow all HTTP methods
     allow_headers=["*"],  # Allow all headers
 )
 
 
-# Define a Pydantic model for the request body
+# Pydantic model for code submission
 class CodeSubmission(BaseModel):
-    code: str  # The code to be executed, provided as a string
+    code: str  # Field for the code to be executed
 
 
-# Define a POST endpoint at the path "/api/test-code"
-@app.post("/api/test-code")
-def test_code(submission: CodeSubmission):
+# Dependency to get DB session
+def get_db() -> Session:
+    db = SessionLocal()
     try:
-        # Use subprocess to run the provided code in a new Python process
+        yield db
+    finally:
+        db.close()
+
+
+@app.post("/api/test-code")
+def test_code(submission: CodeSubmission) -> dict:
+    """
+    Endpoint to test the submitted code. Executes the code and returns the output or error.
+    """
+    try:
+        # Run the submitted code using a subprocess
         result = subprocess.run(
-            ["python3", "-c", submission.code],  # Command to run the code using python3
-            capture_output=True,  # Capture the output (stdout and stderr)
-            text=True,  # Capture the output as text (string) instead of bytes
-            timeout=5,  # Set a timeout of 5 seconds for the code execution
+            ["python3", "-c", submission.code],
+            capture_output=True,
+            text=True,
+            timeout=20,  # Increased timeout to 20 seconds
         )
-        # Check the return code of the subprocess
+        # Check if the code execution was successful
         if result.returncode != 0:
-            # If the return code is non-zero, raise an HTTPException with the stderr output
             raise HTTPException(status_code=400, detail=result.stderr)
-        # If the return code is zero, return the stdout output as a JSON response
+        # Return the output of the code execution
         return {"output": result.stdout}
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=400, detail="Code execution timed out.")
     except Exception as e:
-        # If any exception occurs, raise an HTTPException with the exception message
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/submit-code")
+def submit_code(submission: CodeSubmission, db: Session = Depends(get_db)) -> dict:
+    """
+    Endpoint to submit the code. Executes the code, and if successful, stores the code and output in the database.
+    """
+    try:
+        # Run the submitted code using a subprocess
+        result = subprocess.run(
+            ["python3", "-c", submission.code],
+            capture_output=True,
+            text=True,
+            timeout=20,  # Increased timeout to 20 seconds
+        )
+        # Check if the code execution was successful
+        if result.returncode != 0:
+            raise HTTPException(status_code=400, detail=result.stderr)
+
+        # Persist code and output to the database
+        db_submission = models.CodeSubmission(
+            code=submission.code, output=result.stdout
+        )
+        db.add(db_submission)
+        db.commit()
+        db.refresh(db_submission)
+
+        # Return the output of the code execution
+        return {"output": result.stdout}
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=400, detail="Code execution timed out.")
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
