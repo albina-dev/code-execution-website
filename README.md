@@ -66,3 +66,8 @@
     npm start
     ```
 
+## Database Setup
+The SQLite database will be created automatically when the backend runs for the first time. The database file test.db will be located in the backend directory.
+
+If you need to inspect the database, you can use SQLite tools such as sqlite3 or DB Browser for SQLite.
+
