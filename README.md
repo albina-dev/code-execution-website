@@ -54,7 +54,7 @@ The platform uses SQLite for database management. It stores user-submitted code 
 
 2. **Create and Activate a Virtual Environment**:
     ```sh
-    python -m venv venv
+    python -m venv venv       # or python3 -m venv venv
     source venv/bin/activate  # macOS/Linux
     .\venv\Scripts\activate   # Windows
     ```
