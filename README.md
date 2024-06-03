@@ -109,6 +109,10 @@ The platform uses SQLite for database management. It stores user-submitted code 
     ```
 3. **Navigate to http://localhost:5173/**
 
+## Docker
+
+For secure execution, I planned to run the code in a dynamic Docker container. Unfortunately, I ran into configuration issues and ran out of time to implement that part. 
+
 ## Database Setup
 The SQLite database will be created automatically when the backend runs for the first time. The database file test.db will be located in the backend directory.
 
