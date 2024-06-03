@@ -105,8 +105,9 @@ The platform uses SQLite for database management. It stores user-submitted code 
 
 2. **Start the Development Server**:
     ```sh
-    npm start
+    npm run dev
     ```
+3. **Navigate to http://localhost:5173/**
 
 ## Database Setup
 The SQLite database will be created automatically when the backend runs for the first time. The database file test.db will be located in the backend directory.
